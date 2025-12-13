@@ -405,20 +405,68 @@ export default function LoginPage() {
             </AnimatePresence>
           </Card>
 
-          {/* Quick Hint */}
-          {isAdmin && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/20 text-center"
+          {/* Demo Credentials */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-4 p-4 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 backdrop-blur-sm"
+          >
+            <div className="flex items-start gap-2 mb-2">
+              <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground mb-2">
+                  🎯 Demo Login Credentials
+                </p>
+                {isAdmin ? (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      <Shield className="h-3 w-3 inline mr-1" />
+                      <strong>Admin:</strong>
+                    </p>
+                    <div className="bg-background/50 p-2 rounded border border-border/50">
+                      <code className="text-xs text-primary">
+                        Username: <span className="font-bold">admin</span>
+                      </code>
+                      <br />
+                      <code className="text-xs text-primary">
+                        Password: <span className="font-bold">admin123</span>
+                      </code>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      <Store className="h-3 w-3 inline mr-1" />
+                      <strong>Franchise:</strong>
+                    </p>
+                    <div className="bg-background/50 p-2 rounded border border-border/50">
+                      <code className="text-xs text-primary">
+                        Email: <span className="font-bold">demo@shop.com</span>
+                      </code>
+                      <br />
+                      <code className="text-xs text-primary">
+                        Password: <span className="font-bold">demo123</span>
+                      </code>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (isAdmin) {
+                  setAdminForm({ username: 'admin', password: 'admin123' });
+                } else {
+                  setFranchiseForm({ email: 'demo@shop.com', password: 'demo123' });
+                }
+              }}
+              className="w-full mt-2 text-xs text-center text-primary hover:text-primary/80 font-medium transition-colors"
             >
-              <p className="text-xs text-muted-foreground">
-                <Shield className="h-3 w-3 inline mr-1" />
-                Default: <code className="bg-primary/20 px-2 py-0.5 rounded">admin / @Alakh123</code>
-              </p>
-            </motion.div>
-          )}
+              Click to fill demo credentials
+            </button>
+          </motion.div>
         </motion.div>
       </motion.div>
 

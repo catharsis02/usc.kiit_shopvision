@@ -39,7 +39,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const ADMIN_CREDENTIALS = {
   username: 'admin',
-  password: '@Alakh123'
+  password: 'admin123'
+};
+
+// Demo franchise credentials (fallback if Supabase is not set up)
+const DEMO_FRANCHISE = {
+  email: 'demo@shop.com',
+  password: 'demo123',
+  franchiseName: 'Demo Store',
+  shopNumber: 'SHOP-001'
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -69,6 +77,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(adminUser);
         localStorage.setItem('currentUser', JSON.stringify(adminUser));
         console.log('✅ Admin login successful');
+        return true;
+      }
+
+      // Check demo franchise credentials first
+      if (emailOrUsername === DEMO_FRANCHISE.email && password === DEMO_FRANCHISE.password) {
+        const demoUser: User = {
+          id: 'demo-franchise-001',
+          email: DEMO_FRANCHISE.email,
+          role: 'franchise',
+          franchiseName: DEMO_FRANCHISE.franchiseName,
+          shopNumber: DEMO_FRANCHISE.shopNumber,
+          createdAt: new Date().toISOString()
+        };
+        setUser(demoUser);
+        localStorage.setItem('currentUser', JSON.stringify(demoUser));
+        console.log('✅ Demo franchise login successful');
         return true;
       }
 
