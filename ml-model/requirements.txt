@@ -1,0 +1,18 @@
+# BharatShop ML Model Requirements
+
+# Core ML/DL
+tensorflow==2.15.0
+numpy==1.24.3
+pillow==10.2.0
+
+# Dataset download
+kaggle==1.6.6
+
+# API Server
+flask==3.0.0
+flask-cors==4.0.0
+
+# Utilities
+opencv-python==4.9.0.80
+matplotlib==3.8.2
+scikit-learn==1.4.0
