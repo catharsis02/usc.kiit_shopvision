@@ -6,6 +6,7 @@ Uses ResNet50 architecture (224x224 input)
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from PIL import Image
+from pathlib import Path
 import numpy as np
 import io
 import os
@@ -17,6 +18,23 @@ CORS(app)
 model = None
 class_names = []
 
+BASE_DIR = Path(__file__).resolve().parent
+ROOT_DIR = BASE_DIR
+ARTIFACTS_DIR = ROOT_DIR / "ml" / "artifacts"
+CLASS_NAMES_PATH = ARTIFACTS_DIR / "class_names.txt"
+MODEL_PATH = ARTIFACTS_DIR / "classifier.keras"
+MODEL_H5_PATH = ARTIFACTS_DIR / "classifier.h5"
+DATASET_TRAIN_DIR = (
+    ROOT_DIR
+    / "fruit_dataset"
+    / "dataset"
+    / "Fruits-360_"
+    / "data"
+    / "fruits-360_100x100"
+    / "fruits-360"
+    / "Training"
+)
+
 # Default prices (₹ per kg) - Supports multiple fruit varieties
 DEFAULT_PRICES = {
     'Apple': 120, 'Banana': 40, 'Grapes': 80, 'Mango': 150,
@@ -26,6 +44,19 @@ DEFAULT_PRICES = {
     'Apricot': 150, 'Avocado': 200, 'Blackberrie': 300, 'Blueberry': 400,
     'Cabbage': 30, 'Beetroot': 40, 'Beans': 60, 'Peach': 120
 }
+
+@app.route('/', methods=['GET'])
+def index():
+    """Basic API index so opening the Flask URL in a browser is useful."""
+    return jsonify({
+        'service': 'ShopVision Fruit Detection API',
+        'status': 'running',
+        'endpoints': {
+            'health': 'GET /health',
+            'classes': 'GET /classes',
+            'predict': 'POST /predict with multipart form field "image"'
+        }
+    })
 
 def get_price_for_fruit(fruit_name):
     """Get price for a fruit, handling variants like 'Apple 10', 'Apple Red 1', etc."""
@@ -82,16 +113,16 @@ def load_model_lazy():
     print(f"   TensorFlow version: {tf.__version__}")
     
     # First, load class names to know the number of classes
-    class_names_file = 'class_names.txt'
-    if os.path.exists(class_names_file):
+    class_names_file = CLASS_NAMES_PATH
+    if class_names_file.exists():
         with open(class_names_file, 'r') as f:
             class_names = [line.strip() for line in f.readlines() if line.strip()]
         print(f"✅ Loaded {len(class_names)} fruit classes from {class_names_file}")
     else:
         print(f"⚠️  class_names.txt not found, trying training directory...")
-        data_dir = "fruit_dataset/dataset/Fruits-360_/data/fruits-360_100x100/fruits-360/Training"
-        if os.path.exists(data_dir):
-            class_names = sorted([d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))])
+        data_dir = DATASET_TRAIN_DIR
+        if data_dir.exists():
+            class_names = sorted([d.name for d in data_dir.iterdir() if d.is_dir()])
             print(f"✅ Loaded {len(class_names)} fruit classes from training directory")
         else:
             class_names = ['Apple', 'Banana', 'Grapes', 'Mango', 'Orange', 'Strawberry', 'Tomato']
@@ -99,13 +130,13 @@ def load_model_lazy():
     
     num_classes = len(class_names)
     
-    print(f"📂 Loading model from classifier.keras...")
+    print(f"📂 Loading model from {MODEL_PATH}...")
     
     try:
         # Method 1: Standard load with compile=False
         try:
             print("   Attempting standard load...")
-            model = tf.keras.models.load_model('classifier.keras', compile=False)
+            model = tf.keras.models.load_model(str(MODEL_PATH), compile=False)
             model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
             print("✅ Model loaded successfully!")
             
@@ -114,9 +145,9 @@ def load_model_lazy():
             print(f"⚠️  Standard load failed: {error_msg[:80]}...")
             
             # Method 2: Try loading with h5 format if available
-            if os.path.exists('classifier.h5'):
+            if MODEL_H5_PATH.exists():
                 print("   Trying .h5 format...")
-                model = tf.keras.models.load_model('classifier.h5', compile=False)
+                model = tf.keras.models.load_model(str(MODEL_H5_PATH), compile=False)
                 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
                 print("✅ Model loaded from .h5!")
                 
@@ -131,7 +162,7 @@ def load_model_lazy():
                     # Try to load weights from the keras file
                     print("   Loading weights into rebuilt architecture...")
                     import zipfile
-                    with zipfile.ZipFile('classifier.keras', 'r') as z:
+                    with zipfile.ZipFile(str(MODEL_PATH), 'r') as z:
                         # Extract weights file to temp location
                         z.extract('model.weights.h5', '/tmp/')
                     
@@ -146,7 +177,7 @@ def load_model_lazy():
                     raise Exception(
                         "\n❌ Model is incompatible with current TensorFlow version.\n"
                         "   Please retrain the model:\n"
-                        "   → Run: python train_fruit_model.py"
+                        "   → Run: python ml/scripts/train_fruit_model.py"
                     )
             else:
                 raise e1
@@ -158,7 +189,7 @@ def load_model_lazy():
     except Exception as e:
         print(f"\n❌ Error loading model: {e}")
         print("\n💡 Solution: Retrain the model with your current TensorFlow version")
-        print(f"   Run: python train_fruit_model.py")
+        print(f"   Run: python ml/scripts/train_fruit_model.py")
         import traceback
         traceback.print_exc()
         raise
@@ -257,7 +288,7 @@ def get_classes():
     })
 
 if __name__ == '__main__':
-    print("🍎 ShopVision Fruit Detection API")
-    print("🌐 Starting server on http://localhost:5000")
-    print("💡 Model will be loaded on first prediction request")
-    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+    print("ShopVision Fruit Detection API")
+    print("Starting server on http://localhost:5000")
+    print("Model will be loaded on first prediction request")
+    app.run(host='127.0.0.1', port=5000, debug=True, use_reloader=False)

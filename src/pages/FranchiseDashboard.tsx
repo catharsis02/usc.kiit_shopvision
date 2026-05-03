@@ -1,9 +1,9 @@
-import { StatsCard } from "@/components/StatsCard";
-import { SalesBarChart, CategoryPieChart, RevenueLineChart, StockLevelChart, OrdersTrendChart } from "@/components/DashboardCharts";
-import { BillsTable } from "@/components/BillsTable";
-import { InventoryTable } from "@/components/InventoryTable";
-import { BillingScanner } from "@/components/BillingScanner";
-import { IndianBanner } from "@/components/IndianBanner";
+import { StatsCard } from "@/features/dashboard/components/StatsCard";
+import { SalesBarChart, CategoryPieChart, RevenueLineChart, StockLevelChart, OrdersTrendChart } from "@/features/dashboard/components/DashboardCharts";
+import { IndianBanner } from "@/features/dashboard/components/IndianBanner";
+import { BillingScanner } from "@/features/billing/components/BillingScanner";
+import { BillsTable } from "@/features/billing/components/BillsTable";
+import { InventoryTable } from "@/features/inventory/components/InventoryTable";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/contexts/AuthContext";
@@ -75,9 +75,9 @@ export default function FranchiseDashboard() {
     return 'dashboard';
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (user?.id) {
-      const success = updateFranchiseData(user.id, editData);
+      const success = await updateFranchiseData(user.id, editData);
       if (success) {
         setIsEditing(false);
         toast.success("✅ Profile updated successfully!");
@@ -87,10 +87,10 @@ export default function FranchiseDashboard() {
     }
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     if (confirm("⚠️ Are you sure you want to delete your franchise account? This action cannot be undone.")) {
       if (user?.id) {
-        const success = deleteFranchiseData(user.id);
+        const success = await deleteFranchiseData(user.id);
         if (success) {
           toast.success("✅ Account deleted successfully");
           logout();
@@ -439,4 +439,3 @@ export default function FranchiseDashboard() {
     </div>
   );
 }
-

@@ -1,5 +1,11 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, type Database } from '@/lib/supabase';
+import {
+  ADMIN_CREDENTIALS,
+  DEMO_FRANCHISE,
+  normalizeEmail,
+  normalizePassword,
+} from '@/lib/authCredentials';
 
 export interface User {
   id: string;
@@ -19,8 +25,8 @@ export interface FranchiseData {
   password: string;
   createdAt: string;
   sales?: number;
-  inventory?: any[];
-  bills?: any[];
+  inventory?: unknown[];
+  bills?: unknown[];
 }
 
 interface AuthContextType {
@@ -37,19 +43,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_CREDENTIALS = {
-  username: 'admin',
-  password: 'admin123'
-};
-
-// Demo franchise credentials (fallback if Supabase is not set up)
-const DEMO_FRANCHISE = {
-  email: 'demo@shop.com',
-  password: 'demo123',
-  franchiseName: 'Demo Store',
-  shopNumber: 'SHOP-001'
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,11 +56,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (emailOrUsername: string, password: string): Promise<boolean> => {
+    const identifier = emailOrUsername.trim();
+    const normalizedIdentifier = normalizeEmail(identifier);
+    const enteredPassword = normalizePassword(password);
+
     try {
-      console.log('🔐 Login attempt:', { email: emailOrUsername });
-      
+      console.log('🔐 Login attempt:', { email: identifier });
+
+      if (!normalizedIdentifier || !enteredPassword) {
+        return false;
+      }
+	      
       // Check admin login
-      if (emailOrUsername === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+      if (normalizedIdentifier === ADMIN_CREDENTIALS.username && enteredPassword === ADMIN_CREDENTIALS.password) {
         const adminUser: User = {
           id: 'admin-001',
           username: 'admin',
@@ -79,9 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('✅ Admin login successful');
         return true;
       }
-
+	
       // Check demo franchise credentials first
-      if (emailOrUsername === DEMO_FRANCHISE.email && password === DEMO_FRANCHISE.password) {
+      if (normalizedIdentifier === DEMO_FRANCHISE.email && enteredPassword === DEMO_FRANCHISE.password) {
         const demoUser: User = {
           id: 'demo-franchise-001',
           email: DEMO_FRANCHISE.email,
@@ -97,42 +98,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Check franchise login from Supabase
-      console.log('📤 Querying Supabase for franchise...');
-      const { data, error } = await supabase
-        .from('franchises')
-        .select('*')
-        .eq('email', emailOrUsername)
-        .single();
+      if (!supabase) {
+        console.warn('Supabase is not configured; only built-in demo credentials are available.');
+        return false;
+      }
 
-      console.log('📥 Supabase response:', { data, error });
+      console.log('📤 Querying Supabase for franchise...');
+      const { data: franchise, error } = await supabase
+        .from('franchises')
+        .select('id,email,password,franchise_name,shop_number,created_at')
+        .eq('email', normalizedIdentifier)
+        .maybeSingle();
+
+      console.log('📥 Supabase response:', { found: !!franchise, error });
 
       if (error) {
         console.error('❌ Supabase error:', error);
         return false;
       }
 
-      if (!data) {
-        console.error('❌ No franchise found with email:', emailOrUsername);
+      if (!franchise) {
+        console.error('❌ No franchise found with email:', identifier);
         return false;
       }
-
+	
       // Check password match
       console.log('🔑 Checking password...');
-      console.log('Entered password:', password);
-      console.log('Stored password:', data.password);
-      
-      if (data.password !== password) {
+	      
+      if (normalizePassword(franchise.password) !== enteredPassword) {
         console.error('❌ Password mismatch');
         return false;
       }
 
       const franchiseUser: User = {
-        id: data.id,
-        email: data.email,
+        id: franchise.id,
+        email: normalizeEmail(franchise.email),
         role: 'franchise',
-        franchiseName: data.franchise_name,
-        shopNumber: data.shop_number,
-        createdAt: data.created_at
+        franchiseName: franchise.franchise_name,
+        shopNumber: franchise.shop_number,
+        createdAt: franchise.created_at
       };
       
       setUser(franchiseUser);
@@ -152,6 +156,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getFranchiseData = async (franchiseId: string): Promise<FranchiseData | null> => {
     try {
+      if (!supabase) {
+        if (user?.role === 'franchise' && user.id === franchiseId) {
+          return {
+            id: user.id,
+            franchiseName: user.franchiseName || DEMO_FRANCHISE.franchiseName,
+            shopNumber: user.shopNumber || DEMO_FRANCHISE.shopNumber,
+            email: user.email || DEMO_FRANCHISE.email,
+            password: user.id === 'demo-franchise-001' ? DEMO_FRANCHISE.password : '',
+            createdAt: user.createdAt,
+            sales: 0
+          };
+        }
+
+        console.warn('Supabase is not configured; franchise data is unavailable.');
+        return null;
+      }
+
       const { data, error } = await supabase
         .from('franchises')
         .select('*')
@@ -180,11 +201,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateFranchiseData = async (franchiseId: string, data: Partial<FranchiseData>): Promise<boolean> => {
     try {
-      const updateData: any = {};
-      if (data.franchiseName) updateData.franchise_name = data.franchiseName;
-      if (data.shopNumber) updateData.shop_number = data.shopNumber;
-      if (data.email) updateData.email = data.email;
-      if (data.password) updateData.password = data.password;
+      if (!supabase) {
+        console.warn('Supabase is not configured; franchise updates are disabled.');
+        return false;
+      }
+
+      const updateData: Database['public']['Tables']['franchises']['Update'] = {};
+      if (data.franchiseName) updateData.franchise_name = data.franchiseName.trim();
+      if (data.shopNumber) updateData.shop_number = data.shopNumber.trim();
+      if (data.email) updateData.email = normalizeEmail(data.email);
+      if (data.password) updateData.password = normalizePassword(data.password);
 
       const { error } = await supabase
         .from('franchises')
@@ -200,9 +226,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (user?.id === franchiseId) {
         const updatedUser = {
           ...user,
-          franchiseName: data.franchiseName || user.franchiseName,
-          shopNumber: data.shopNumber || user.shopNumber,
-          email: data.email || user.email
+          franchiseName: updateData.franchise_name || user.franchiseName,
+          shopNumber: updateData.shop_number || user.shopNumber,
+          email: updateData.email || user.email
         };
         setUser(updatedUser);
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
@@ -217,6 +243,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const deleteFranchiseData = async (franchiseId: string): Promise<boolean> => {
     try {
+      if (!supabase) {
+        console.warn('Supabase is not configured; franchise deletion is disabled.');
+        return false;
+      }
+
       const { error } = await supabase
         .from('franchises')
         .delete()

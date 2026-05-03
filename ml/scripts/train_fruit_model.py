@@ -21,9 +21,14 @@ import json
 
 print(f"[INFO] TensorFlow {tf.__version__}")
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+ML_DIR = SCRIPT_DIR.parent
+ROOT_DIR = ML_DIR.parent
+ARTIFACTS_DIR = ML_DIR / "artifacts"
+
 # Dataset paths
-TRAIN_DIR = Path("fruit_dataset/dataset/Fruits-360_/data/fruits-360_100x100/fruits-360/Training")
-TEST_DIR = Path("fruit_dataset/dataset/Fruits-360_/data/fruits-360_100x100/fruits-360/Test")
+TRAIN_DIR = ROOT_DIR / "fruit_dataset" / "dataset" / "Fruits-360_" / "data" / "fruits-360_100x100" / "fruits-360" / "Training"
+TEST_DIR = ROOT_DIR / "fruit_dataset" / "dataset" / "Fruits-360_" / "data" / "fruits-360_100x100" / "fruits-360" / "Test"
 
 if not TRAIN_DIR.exists():
     print(f"[ERROR] Training directory not found: {TRAIN_DIR}")
@@ -34,10 +39,20 @@ class_names = sorted([d.name for d in TRAIN_DIR.iterdir() if d.is_dir()])
 num_classes = len(class_names)
 print(f"[INFO] Found {num_classes} fruit classes")
 
+ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+
 # Save class names for API
-with open('fruit_classes.json', 'w') as f:
+fruit_classes_path = ARTIFACTS_DIR / "fruit_classes.json"
+class_names_path = ARTIFACTS_DIR / "class_names.txt"
+
+with open(fruit_classes_path, 'w') as f:
     json.dump(class_names, f)
-print("[OK] Saved fruit_classes.json")
+
+with open(class_names_path, 'w') as f:
+    f.write("\n".join(class_names))
+
+print(f"[OK] Saved {fruit_classes_path}")
+print(f"[OK] Saved {class_names_path}")
 
 # Image parameters
 IMG_SIZE = (100, 100)  # Fruits-360 is 100x100
@@ -129,8 +144,7 @@ print("\n[EVAL] Evaluating on test set...")
 test_loss, test_acc = model.evaluate(test_ds, verbose=0)
 print(f"[RESULT] Test accuracy: {test_acc*100:.2f}%")
 
-# Save model
-MODEL_PATH = 'fruit_classifier.keras'
+MODEL_PATH = ARTIFACTS_DIR / "classifier.keras"
 print(f"\n[SAVE] Saving model to {MODEL_PATH}...")
 model.save(MODEL_PATH)
 print("[OK] Model saved!")

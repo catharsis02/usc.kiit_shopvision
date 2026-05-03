@@ -1,4 +1,4 @@
-# 🔐 BharatShop Authentication System
+# 🔐 ShopVision Authentication System
 
 ## Overview
 Complete franchise management system with admin and franchise roles. Admin registers franchises, franchises manage their own data.

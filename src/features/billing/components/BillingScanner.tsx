@@ -19,6 +19,17 @@ interface BillItem {
   confidence: number;
 }
 
+interface PredictionItem {
+  fruit: string;
+  confidence: number;
+}
+
+interface PredictionResponse extends PredictionItem {
+  price?: number;
+  unit?: string;
+  top_predictions?: PredictionItem[];
+}
+
 export function BillingScanner() {
   const { t } = useLanguage();
   const [image, setImage] = useState<string | null>(null);
@@ -77,7 +88,7 @@ export function BillingScanner() {
         throw new Error('Prediction failed');
       }
       
-      const prediction = await apiResponse.json();
+      const prediction = (await apiResponse.json()) as PredictionResponse;
       console.log('Prediction received:', prediction);
       
       // Find matching fruit in inventory or create new one
@@ -102,7 +113,7 @@ export function BillingScanner() {
       const confidence = prediction.confidence / 100;
       
       // Map top predictions
-      const apiResults: RecognitionResult[] = prediction.top_predictions?.map((p: any) => ({
+      const apiResults: RecognitionResult[] = prediction.top_predictions?.map((p) => ({
         label: p.fruit,
         confidence: p.confidence / 100
       })) || [

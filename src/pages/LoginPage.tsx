@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/hooks/useLanguage";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { ADMIN_CREDENTIALS, DEMO_FRANCHISE } from "@/lib/authCredentials";
 import { toast } from "sonner";
 import { 
   Lock, 
@@ -40,6 +41,24 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { t } = useLanguage();
 
+  const fillAdminDemoCredentials = () => {
+    setIsAdmin(true);
+    setAdminForm({
+      username: ADMIN_CREDENTIALS.username,
+      password: ADMIN_CREDENTIALS.password,
+    });
+    setFranchiseForm({ email: '', password: '' });
+  };
+
+  const fillFranchiseDemoCredentials = () => {
+    setIsAdmin(false);
+    setFranchiseForm({
+      email: DEMO_FRANCHISE.email,
+      password: DEMO_FRANCHISE.password,
+    });
+    setAdminForm({ username: '', password: '' });
+  };
+	
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -405,47 +424,68 @@ export default function LoginPage() {
             </AnimatePresence>
           </Card>
 
-          {/* Demo Credentials - Admin Only */}
-          {isAdmin && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-4 p-4 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 backdrop-blur-sm"
-            >
-              <div className="flex items-start gap-2 mb-2">
-                <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground mb-2">
-                    🎯 Demo Login Credentials
-                  </p>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">
-                      <Shield className="h-3 w-3 inline mr-1" />
-                      <strong>Admin:</strong>
-                    </p>
-                    <div className="bg-background/50 p-2 rounded border border-border/50">
-                      <code className="text-xs text-primary">
-                        Username: <span className="font-bold">admin</span>
-                      </code>
-                      <br />
-                      <code className="text-xs text-primary">
-                        Password: <span className="font-bold">admin123</span>
-                      </code>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAdminForm({ username: 'admin', password: 'admin123' })}
-                className="w-full mt-2 text-xs text-center text-primary hover:text-primary/80 font-medium transition-colors"
-              >
-                Click to fill demo credentials
-              </button>
-            </motion.div>
-          )}
-        </motion.div>
+	          {/* Demo Credentials */}
+	          <motion.div
+	            initial={{ opacity: 0 }}
+	            animate={{ opacity: 1 }}
+	            transition={{ delay: 0.5 }}
+	            className="mt-4 p-4 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30 backdrop-blur-sm"
+	          >
+	            <div className="flex items-start gap-2 mb-3">
+	              <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+	              <div>
+	                <p className="text-sm font-semibold text-foreground">
+	                  Demo Login Credentials
+	                </p>
+	                <p className="text-xs text-muted-foreground">
+	                  Use these to quickly test both dashboards.
+	                </p>
+	              </div>
+	            </div>
+
+	            <div className="grid sm:grid-cols-2 gap-3">
+	              <div className="bg-background/50 p-3 rounded border border-border/50">
+	                <p className="text-xs text-muted-foreground mb-2">
+	                  <Shield className="h-3 w-3 inline mr-1" />
+	                  <strong>Admin</strong>
+	                </p>
+	                <code className="text-xs text-primary block">
+	                  Username: <span className="font-bold">{ADMIN_CREDENTIALS.username}</span>
+	                </code>
+	                <code className="text-xs text-primary block">
+	                  Password: <span className="font-bold">{ADMIN_CREDENTIALS.password}</span>
+	                </code>
+	                <button
+	                  type="button"
+	                  onClick={fillAdminDemoCredentials}
+	                  className="w-full mt-2 text-xs text-center text-primary hover:text-primary/80 font-medium transition-colors"
+	                >
+	                  Fill admin demo
+	                </button>
+	              </div>
+
+	              <div className="bg-background/50 p-3 rounded border border-border/50">
+	                <p className="text-xs text-muted-foreground mb-2">
+	                  <Store className="h-3 w-3 inline mr-1" />
+	                  <strong>Franchise</strong>
+	                </p>
+	                <code className="text-xs text-primary block">
+	                  Email: <span className="font-bold">{DEMO_FRANCHISE.email}</span>
+	                </code>
+	                <code className="text-xs text-primary block">
+	                  Password: <span className="font-bold">{DEMO_FRANCHISE.password}</span>
+	                </code>
+	                <button
+	                  type="button"
+	                  onClick={fillFranchiseDemoCredentials}
+	                  className="w-full mt-2 text-xs text-center text-primary hover:text-primary/80 font-medium transition-colors"
+	                >
+	                  Fill franchise demo
+	                </button>
+	              </div>
+	            </div>
+	          </motion.div>
+	        </motion.div>
       </motion.div>
 
       {/* Floating Decorative Elements */}

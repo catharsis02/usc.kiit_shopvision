@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/hooks/useLanguage";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { supabase } from "@/lib/supabase";
+import { normalizeEmail, normalizePassword } from "@/lib/authCredentials";
 import { toast } from "sonner";
 import { 
   Store, 
@@ -74,6 +75,12 @@ export default function AdminDashboard() {
 
   const loadFranchises = async () => {
     try {
+      if (!supabase) {
+        console.warn('Supabase is not configured; franchise management data is unavailable.');
+        setFranchises([]);
+        return;
+      }
+
       console.log('📥 Loading franchises from Supabase...');
       
       const { data, error } = await supabase
@@ -103,31 +110,46 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAddFranchise = async () => {
-    if (!newFranchise.franchise_name || !newFranchise.shop_number || !newFranchise.email || !newFranchise.password) {
+	  const handleAddFranchise = async () => {
+    const franchiseToCreate = {
+      franchise_name: newFranchise.franchise_name.trim(),
+      shop_number: newFranchise.shop_number.trim(),
+      email: normalizeEmail(newFranchise.email),
+      password: normalizePassword(newFranchise.password),
+      sales: 0,
+    };
+
+    if (
+      !franchiseToCreate.franchise_name ||
+      !franchiseToCreate.shop_number ||
+      !franchiseToCreate.email ||
+      !franchiseToCreate.password
+    ) {
       toast.error("❌ All fields are required");
       return;
     }
 
     setLoading(true);
     try {
-      console.log('📤 Attempting to insert franchise:', {
-        franchise_name: newFranchise.franchise_name,
-        shop_number: newFranchise.shop_number,
-        email: newFranchise.email,
-        password: '***hidden***',
-        sales: 0
-      });
+      if (!supabase) {
+        toast.error("❌ Supabase is not configured", {
+          description: "Create .env.local with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+        });
+        setLoading(false);
+        return;
+      }
 
+      console.log('📤 Attempting to insert franchise:', {
+        franchise_name: franchiseToCreate.franchise_name,
+        shop_number: franchiseToCreate.shop_number,
+        email: franchiseToCreate.email,
+        password: '***hidden***',
+        sales: franchiseToCreate.sales
+      });
+	
       const { data, error } = await supabase
         .from('franchises')
-        .insert([{
-          franchise_name: newFranchise.franchise_name,
-          shop_number: newFranchise.shop_number,
-          email: newFranchise.email,
-          password: newFranchise.password,
-          sales: 0
-        }])
+        .insert([franchiseToCreate])
         .select()
         .single();
 
@@ -153,9 +175,13 @@ export default function AdminDashboard() {
         return;
       }
 
-      console.log('✅ Franchise added successfully:', data);
-      toast.success(`✅ Franchise "${newFranchise.franchise_name}" registered successfully!`, {
-        description: `Email: ${newFranchise.email} | Shop: ${newFranchise.shop_number}`
+      console.log('✅ Franchise added successfully:', {
+        id: data.id,
+        email: data.email,
+        franchise_name: data.franchise_name,
+      });
+      toast.success(`✅ Franchise "${franchiseToCreate.franchise_name}" registered successfully!`, {
+        description: `Email: ${franchiseToCreate.email} | Shop: ${franchiseToCreate.shop_number}`
       });
 
       loadFranchises();
@@ -179,17 +205,37 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleEditSave = async (id: string) => {
+	  const handleEditSave = async (id: string) => {
+    const franchiseToUpdate = {
+      franchise_name: String(editData.franchise_name || '').trim(),
+      shop_number: String(editData.shop_number || '').trim(),
+      email: normalizeEmail(String(editData.email || '')),
+      password: normalizePassword(String(editData.password || '')),
+    };
+
+    if (
+      !franchiseToUpdate.franchise_name ||
+      !franchiseToUpdate.shop_number ||
+      !franchiseToUpdate.email ||
+      !franchiseToUpdate.password
+    ) {
+      toast.error("❌ All fields are required");
+      return;
+    }
+
     setLoading(true);
     try {
+      if (!supabase) {
+        toast.error("❌ Supabase is not configured", {
+          description: "Create .env.local with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase
         .from('franchises')
-        .update({
-          franchise_name: editData.franchise_name,
-          shop_number: editData.shop_number,
-          email: editData.email,
-          password: editData.password
-        })
+        .update(franchiseToUpdate)
         .eq('id', id);
 
       if (error) {
@@ -222,6 +268,14 @@ export default function AdminDashboard() {
 
     setLoading(true);
     try {
+      if (!supabase) {
+        toast.error("❌ Supabase is not configured", {
+          description: "Create .env.local with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase
         .from('franchises')
         .delete()
@@ -453,7 +507,7 @@ export default function AdminDashboard() {
                       <TableCell className="font-medium">
                         {editingId === franchise.id ? (
                           <Input
-                            value={editData.franchise_name}
+	                            value={editData.franchise_name || ''}
                             onChange={(e) => setEditData({ ...editData, franchise_name: e.target.value })}
                             className="h-8"
                           />
@@ -467,7 +521,7 @@ export default function AdminDashboard() {
                       <TableCell>
                         {editingId === franchise.id ? (
                           <Input
-                            value={editData.shop_number}
+	                            value={editData.shop_number || ''}
                             onChange={(e) => setEditData({ ...editData, shop_number: e.target.value })}
                             className="h-8"
                           />
@@ -478,7 +532,7 @@ export default function AdminDashboard() {
                       <TableCell>
                         {editingId === franchise.id ? (
                           <Input
-                            value={editData.email}
+	                            value={editData.email || ''}
                             type="email"
                             onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                             className="h-8"
@@ -490,7 +544,7 @@ export default function AdminDashboard() {
                       <TableCell>
                         {editingId === franchise.id ? (
                           <Input
-                            value={editData.password}
+	                            value={editData.password || ''}
                             type="password"
                             onChange={(e) => setEditData({ ...editData, password: e.target.value })}
                             className="h-8"

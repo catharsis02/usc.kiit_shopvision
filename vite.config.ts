@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8081,
+    watch: {
+      ignored: ["**/.venv/**", "**/dist/**"],
+    },
   },
   plugins: [react()].filter(Boolean),
   resolve: {

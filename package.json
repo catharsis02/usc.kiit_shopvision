@@ -4,8 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "check:supabase": "node scripts/check-supabase.mjs",
+    "predev": "node scripts/check-supabase.mjs --mode development",
     "dev": "vite",
+    "prebuild": "node scripts/check-supabase.mjs --mode production",
     "build": "vite build",
+    "prebuild:dev": "node scripts/check-supabase.mjs --mode development",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"
