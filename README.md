@@ -6,7 +6,7 @@ AI-powered grocery management system built for Indian franchise stores. Identifi
 
 ## Features
 
-- **Produce recognition** — identify 140+ fruits and vegetables from a photo or live camera feed
+- **Product recognition** — identify 140+ fruits and vegetables from a photo or live camera feed
 - **Smart billing** — scan items to auto-populate bills with price lookups
 - **Inventory management** — add, edit, and track stock per franchise location
 - **Dashboard analytics** — per-franchise sales trends and stock insights
